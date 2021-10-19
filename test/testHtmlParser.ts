@@ -1,3 +1,7 @@
+// Fix for https://github.com/simonbengtsson/jsPDF-AutoTable/runs/3567913815
+global.TextEncoder = require("util").TextEncoder; 
+global.TextDecoder = require("util").TextDecoder; 
+
 import { parseHtml } from '../src/htmlParser'
 import { DocHandler } from '../src/documentHandler'
 import { loadJspdf } from './common'

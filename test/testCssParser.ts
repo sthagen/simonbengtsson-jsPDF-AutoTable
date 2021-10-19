@@ -1,3 +1,7 @@
+// Fix for https://github.com/simonbengtsson/jsPDF-AutoTable/runs/3567913815
+global.TextEncoder = require("util").TextEncoder;
+global.TextDecoder = require("util").TextDecoder;
+
 import { parseCss } from '../src/cssParser'
 const assert = require('assert')
 const jsdom = require('jsdom')
@@ -42,7 +46,7 @@ describe('css parser', () => {
     assert(styles.fontSize === 16 / pxScaleFactor, 'No font size')
   })
 
-  it.only('minimal styles', () => {
+  it('minimal styles', () => {
     let element = table.insertRow()
     const styles = parseCss([], element, 1, element.style, dom.window)
     assert(styles, 'Should have result')
