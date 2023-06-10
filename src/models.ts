@@ -20,6 +20,7 @@ export interface HookProps {
   didParseCell: CellHook[]
   willDrawCell: CellHook[]
   didDrawCell: CellHook[]
+  willDrawPage: PageHook[]
   didDrawPage: PageHook[]
 }
 
@@ -137,6 +138,11 @@ export class Table {
   callEndPageHooks(doc: DocHandler, cursor: { x: number; y: number }) {
     doc.applyStyles(doc.userStyles)
     for (const handler of this.hooks.didDrawPage) {
+      handler(new HookData(doc, this, cursor))
+    }
+  }
+  callWillDrawPageHooks(doc: DocHandler, cursor: { x: number; y: number }) {
+    for (const handler of this.hooks.willDrawPage) {
       handler(new HookData(doc, this, cursor))
     }
   }
