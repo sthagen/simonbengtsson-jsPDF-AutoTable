@@ -19,7 +19,7 @@ export function drawTable(jsPDFDoc: jsPDFDocument, table: Table): void {
   let minTableBottomPos = startY + margin.bottom + sectionsHeight
 
   if (settings.pageBreak === 'avoid') {
-    const rows = table.allRows()
+    const rows = table.body
     const tableHeight = rows.reduce((acc, row) => acc + row.height, 0)
 
     minTableBottomPos += tableHeight
@@ -400,7 +400,7 @@ function drawCellBorders(doc: DocHandler, cell: Cell, cursor: Pos) {
  * @param doc
  * @param cell
  * @param cursor
- * @param fillColor - `false` for transparent, `string` for color, other types will use "F" from jsPDF.rect
+ * @param fillColor - passed to getFillStyle; `false` will map to transparent, `truthy` values to 'F' from jsPDF.rect
  */
 function drawCellBackground(
   doc: DocHandler,
@@ -408,9 +408,8 @@ function drawCellBackground(
   cursor: Pos,
   fillColor: Color
 ) {
-  const cellFillColor =
-    fillColor === false ? null : typeof fillColor !== 'string' ? 'F' : fillColor
-  doc.rect(cell.x, cursor.y, cell.width, cell.height, cellFillColor)
+  const fillStyle = getFillStyle(0, fillColor)
+  doc.rect(cell.x, cursor.y, cell.width, cell.height, fillStyle)
 }
 
 /**

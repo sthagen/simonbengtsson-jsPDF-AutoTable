@@ -219,7 +219,7 @@ LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
-/* global Reflect, Promise */
+/* global Reflect, Promise, SuppressedError, Symbol */
 
 var extendStatics = function(d, b) {
     extendStatics = Object.setPrototypeOf ||
@@ -245,6 +245,11 @@ function __spreadArray(to, from, pack) {
     }
     return to.concat(ar || Array.prototype.slice.call(from));
 }
+
+typeof SuppressedError === "function" ? SuppressedError : function (error, suppressed, message) {
+    var e = new Error(message);
+    return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
+};
 
 /**
  * Ratio between font size and font height. The number comes from jspdf's source code
@@ -534,7 +539,18 @@ var DocHandler = /** @class */ (function () {
     DocHandler.prototype.splitTextToSize = function (text, size, opts) {
         return this.jsPDFDocument.splitTextToSize(text, size, opts);
     };
+    /**
+     * Adds a rectangle to the PDF
+     * @param x Coordinate (in units declared at inception of PDF document) against left edge of the page
+     * @param y Coordinate (in units declared at inception of PDF document) against upper edge of the page
+     * @param width Width (in units declared at inception of PDF document)
+     * @param height Height (in units declared at inception of PDF document)
+     * @param fillStyle A string specifying the painting style or null. Valid styles include: 'S' [default] - stroke, 'F' - fill, and 'DF' (or 'FD') - fill then stroke. In "compat" API mode, a null value postpones setting the style so that a shape may be composed using multiple method calls. The last drawing method call used to define the shape should not have a null style argument. **In "advanced" API mode this parameter is deprecated.**
+     */
     DocHandler.prototype.rect = function (x, y, width, height, fillStyle) {
+        if (!['S', 'F', 'DF', 'FD', null].some(function (v) { return v === fillStyle; })) {
+            throw new TypeError("Invalid value '".concat(fillStyle, "' passed to rect. Allowed values are: 'S', 'F', 'DF', 'FD', null"));
+        }
         return this.jsPDFDocument.rect(x, y, width, height, fillStyle);
     };
     DocHandler.prototype.getLastAutoTable = function () {
@@ -779,6 +795,7 @@ function parseHooks(global, document, current) {
         didParseCell: [],
         willDrawCell: [],
         didDrawCell: [],
+        willDrawPage: [],
         didDrawPage: [],
     };
     for (var _i = 0, allOptions_1 = allOptions; _i < allOptions_1.length; _i++) {
@@ -789,6 +806,8 @@ function parseHooks(global, document, current) {
             result.willDrawCell.push(options.willDrawCell);
         if (options.didDrawCell)
             result.didDrawCell.push(options.didDrawCell);
+        if (options.willDrawPage)
+            result.willDrawPage.push(options.willDrawPage);
         if (options.didDrawPage)
             result.didDrawPage.push(options.didDrawPage);
     }
@@ -983,6 +1002,12 @@ var Table = /** @class */ (function () {
     Table.prototype.callEndPageHooks = function (doc, cursor) {
         doc.applyStyles(doc.userStyles);
         for (var _i = 0, _a = this.hooks.didDrawPage; _i < _a.length; _i++) {
+            var handler = _a[_i];
+            handler(new HookData(doc, this, cursor));
+        }
+    };
+    Table.prototype.callWillDrawPageHooks = function (doc, cursor) {
+        for (var _i = 0, _a = this.hooks.willDrawPage; _i < _a.length; _i++) {
             var handler = _a[_i];
             handler(new HookData(doc, this, cursor));
         }
@@ -1240,7 +1265,7 @@ function drawTable(jsPDFDoc, table) {
     var sectionsHeight = table.getHeadHeight(table.columns) + table.getFootHeight(table.columns);
     var minTableBottomPos = startY + margin.bottom + sectionsHeight;
     if (settings.pageBreak === 'avoid') {
-        var rows = table.allRows();
+        var rows = table.body;
         var tableHeight = rows.reduce(function (acc, row) { return acc + row.height; }, 0);
         minTableBottomPos += tableHeight;
     }
@@ -1250,6 +1275,7 @@ function drawTable(jsPDFDoc, table) {
         nextPage(doc);
         cursor.y = margin.top;
     }
+    table.callWillDrawPageHooks(doc, cursor);
     var startPos = assign({}, cursor);
     table.startPageNumber = doc.pageNumber();
     if (settings.horizontalPageBreak === true) {
@@ -1487,11 +1513,11 @@ function drawCellBorders(doc, cell, cursor) {
  * @param doc
  * @param cell
  * @param cursor
- * @param fillColor - `false` for transparent, `string` for color, other types will use "F" from jsPDF.rect
+ * @param fillColor - passed to getFillStyle; `false` will map to transparent, `truthy` values to 'F' from jsPDF.rect
  */
 function drawCellBackground(doc, cell, cursor, fillColor) {
-    var cellFillColor = fillColor === false ? null : typeof fillColor !== 'string' ? 'F' : fillColor;
-    doc.rect(cell.x, cursor.y, cell.width, cell.height, cellFillColor);
+    var fillStyle = getFillStyle(0, fillColor);
+    doc.rect(cell.x, cursor.y, cell.width, cell.height, fillStyle);
 }
 /**
  * Draw all specified borders. Borders are centered on cell's edge and lengthened
@@ -1587,6 +1613,8 @@ function addPage(doc, table, startPos, cursor, columns) {
     cursor.x = margin.left;
     cursor.y = margin.top;
     startPos.y = margin.top;
+    // call didAddPage hooks before any content is added to the page
+    table.callWillDrawPageHooks(doc, cursor);
     if (table.settings.showHead === 'everyPage') {
         table.head.forEach(function (row) { return printRow(doc, table, row, cursor, columns); });
         doc.applyStyles(doc.userStyles);
@@ -1598,7 +1626,9 @@ function nextPage(doc) {
     var newCurrent = doc.pageNumber();
     if (newCurrent === current) {
         doc.addPage();
+        return true;
     }
+    return false;
 }
 
 /**
@@ -1641,7 +1671,7 @@ function calculateWidths(doc, table) {
         // reduce font size, increase page size or remove custom cell widths
         // to allow more columns to be reduced in size
         resizeWidth = resizeWidth < 1 ? resizeWidth : Math.round(resizeWidth);
-        console.error("Of the table content, ".concat(resizeWidth, " units width could not fit page"));
+        console.warn("Of the table content, ".concat(resizeWidth, " units width could not fit page"));
     }
     applyColSpans(table);
     fitContent(table, doc);

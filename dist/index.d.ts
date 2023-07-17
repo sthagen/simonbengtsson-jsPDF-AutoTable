@@ -13,7 +13,15 @@ declare class DocHandler {
 	private static unifyColor;
 	applyStyles(styles: Partial<Styles>, fontOnly?: boolean): void;
 	splitTextToSize(text: string | string[], size: number, opts: Opts): string[];
-	rect(x: number, y: number, width: number, height: number, fillStyle: string | null): any;
+	/**
+	 * Adds a rectangle to the PDF
+	 * @param x Coordinate (in units declared at inception of PDF document) against left edge of the page
+	 * @param y Coordinate (in units declared at inception of PDF document) against upper edge of the page
+	 * @param width Width (in units declared at inception of PDF document)
+	 * @param height Height (in units declared at inception of PDF document)
+	 * @param fillStyle A string specifying the painting style or null. Valid styles include: 'S' [default] - stroke, 'F' - fill, and 'DF' (or 'FD') - fill then stroke. In "compat" API mode, a null value postpones setting the style so that a shape may be composed using multiple method calls. The last drawing method call used to define the shape should not have a null style argument. **In "advanced" API mode this parameter is deprecated.**
+	 */
+	rect(x: number, y: number, width: number, height: number, fillStyle: "S" | "F" | "DF" | "FD" | null): any;
 	getLastAutoTable(): Table | null;
 	getTextWidth(text: string | string[]): number;
 	getDocument(): any;
@@ -76,6 +84,7 @@ export interface HookProps {
 	didParseCell: CellHook[];
 	willDrawCell: CellHook[];
 	didDrawCell: CellHook[];
+	willDrawPage: PageHook[];
 	didDrawPage: PageHook[];
 }
 export interface Settings {
@@ -132,6 +141,10 @@ export declare class Table {
 		y: number;
 	} | null): boolean;
 	callEndPageHooks(doc: DocHandler, cursor: {
+		x: number;
+		y: number;
+	}): void;
+	callWillDrawPageHooks(doc: DocHandler, cursor: {
 		x: number;
 		y: number;
 	}): void;
@@ -253,9 +266,15 @@ export interface UserOptions {
 	columnStyles?: {
 		[key: string]: Partial<Styles>;
 	};
+	/** Called when the plugin finished parsing cell content. Can be used to override content or styles for a specific cell. */
 	didParseCell?: CellHook;
+	/** Called before a cell or row is drawn. Can be used to call native jspdf styling functions such as `doc.setTextColor` or change position of text etc before it is drawn. */
 	willDrawCell?: CellHook;
+	/** Called after a cell has been added to the page. Can be used to draw additional cell content such as images with `doc.addImage`, additional text with `doc.addText` or other jspdf shapes. */
 	didDrawCell?: CellHook;
+	/** Called before starting to draw on a page. Can be used to add headers or any other content that you want on each page there is an autotable. */
+	willDrawPage?: PageHook;
+	/** Called after the plugin has finished drawing everything on a page. Can be used to add footers with page numbers or any other content that you want on each page there is an autotable. */
 	didDrawPage?: PageHook;
 }
 export type ColumnInput = string | number | {
