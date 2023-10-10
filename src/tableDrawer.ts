@@ -1,4 +1,4 @@
-import { Color, LineWidths } from './config'
+import { LineWidths } from './config'
 import { addTableBorder, getFillStyle } from './common'
 import { Cell, Column, Pos, Row, Table } from './models'
 import { DocHandler, jsPDFDocument } from './documentHandler'
@@ -52,7 +52,7 @@ export function drawTable(jsPDFDoc: jsPDFDocument, table: Table): void {
       settings.showHead === 'everyPage'
     ) {
       table.head.forEach((row) =>
-        printRow(doc, table, row, cursor, table.columns)
+        printRow(doc, table, row, cursor, table.columns),
       )
     }
 
@@ -65,7 +65,7 @@ export function drawTable(jsPDFDoc: jsPDFDocument, table: Table): void {
 
     if (settings.showFoot === 'lastPage' || settings.showFoot === 'everyPage') {
       table.foot.forEach((row) =>
-        printRow(doc, table, row, cursor, table.columns)
+        printRow(doc, table, row, cursor, table.columns),
       )
     }
   }
@@ -86,33 +86,31 @@ function printTableWithHorizontalPageBreak(
   doc: DocHandler,
   table: Table,
   startPos: { x: number; y: number },
-  cursor: { x: number; y: number }
+  cursor: { x: number; y: number },
 ) {
   // calculate width of columns and render only those which can fit into page
   const allColumnsCanFitResult = calculateAllColumnsCanFitInPage(doc, table)
 
-  allColumnsCanFitResult.map(
-    (colsAndIndexes, index: number) => {
-      doc.applyStyles(doc.userStyles)
-      // add page to print next columns in new page
-      if (index > 0) {
-        addPage(doc, table, startPos, cursor, colsAndIndexes.columns)
-      } else {
-        // print head for selected columns
-        printHead(doc, table, cursor, colsAndIndexes.columns)
-      }
-      // print body & footer for selected columns
-      printBody(doc, table, startPos, cursor, colsAndIndexes.columns)
-      printFoot(doc, table, cursor, colsAndIndexes.columns)
+  allColumnsCanFitResult.map((colsAndIndexes, index: number) => {
+    doc.applyStyles(doc.userStyles)
+    // add page to print next columns in new page
+    if (index > 0) {
+      addPage(doc, table, startPos, cursor, colsAndIndexes.columns)
+    } else {
+      // print head for selected columns
+      printHead(doc, table, cursor, colsAndIndexes.columns)
     }
-  )
+    // print body & footer for selected columns
+    printBody(doc, table, startPos, cursor, colsAndIndexes.columns)
+    printFoot(doc, table, cursor, colsAndIndexes.columns)
+  })
 }
 
 function printHead(
   doc: DocHandler,
   table: Table,
   cursor: Pos,
-  columns: Column[]
+  columns: Column[],
 ) {
   const settings = table.settings
   doc.applyStyles(doc.userStyles)
@@ -126,7 +124,7 @@ function printBody(
   table: Table,
   startPos: Pos,
   cursor: Pos,
-  columns: Column[]
+  columns: Column[],
 ) {
   doc.applyStyles(doc.userStyles)
   table.body.forEach((row, index) => {
@@ -139,7 +137,7 @@ function printFoot(
   doc: DocHandler,
   table: Table,
   cursor: Pos,
-  columns: Column[]
+  columns: Column[],
 ) {
   const settings = table.settings
   doc.applyStyles(doc.userStyles)
@@ -151,12 +149,12 @@ function printFoot(
 function getRemainingLineCount(
   cell: Cell,
   remainingPageSpace: number,
-  doc: DocHandler
+  doc: DocHandler,
 ) {
   const lineHeight = doc.getLineHeight(cell.styles.fontSize)
   const vPadding = cell.padding('vertical')
   const remainingLines = Math.floor(
-    (remainingPageSpace - vPadding) / lineHeight
+    (remainingPageSpace - vPadding) / lineHeight,
   )
   return Math.max(0, remainingLines)
 }
@@ -165,7 +163,7 @@ function modifyRowToFit(
   row: Row,
   remainingPageSpace: number,
   table: Table,
-  doc: DocHandler
+  doc: DocHandler,
 ) {
   const cells: { [key: string]: Cell } = {}
   row.spansMultiplePages = true
@@ -188,12 +186,12 @@ function modifyRowToFit(
     const remainingLineCount = getRemainingLineCount(
       cell,
       remainingPageSpace,
-      doc
+      doc,
     )
     if (cell.text.length > remainingLineCount) {
       remainderCell.text = cell.text.splice(
         remainingLineCount,
-        cell.text.length
+        cell.text.length,
       )
     }
 
@@ -209,7 +207,10 @@ function modifyRowToFit(
       row.height = cell.contentHeight
     }
 
-    remainderCell.contentHeight = remainderCell.getContentHeight(scaleFactor, lineHeightFactor)
+    remainderCell.contentHeight = remainderCell.getContentHeight(
+      scaleFactor,
+      lineHeightFactor,
+    )
     if (remainderCell.contentHeight > rowHeight) {
       rowHeight = remainderCell.contentHeight
     }
@@ -237,7 +238,7 @@ function shouldPrintOnCurrentPage(
   doc: DocHandler,
   row: Row,
   remainingPageSpace: number,
-  table: Table
+  table: Table,
 ) {
   const pageHeight = doc.pageSize().height
   const margin = table.settings.margin
@@ -254,7 +255,7 @@ function shouldPrintOnCurrentPage(
   const minRowFits = minRowHeight < remainingPageSpace
   if (minRowHeight > maxRowHeight) {
     console.error(
-      `Will not be able to print row ${row.index} correctly since it's minimum height is larger than page height`
+      `Will not be able to print row ${row.index} correctly since it's minimum height is larger than page height`,
     )
     return true
   }
@@ -268,7 +269,7 @@ function shouldPrintOnCurrentPage(
   if (rowHigherThanPage) {
     if (rowHasRowSpanCell) {
       console.error(
-        `The content of row ${row.index} will not be drawn correctly since drawing rows with a height larger than the page height and has cells with rowspans is not supported.`
+        `The content of row ${row.index} will not be drawn correctly since drawing rows with a height larger than the page height and has cells with rowspans is not supported.`,
       )
     }
     return true
@@ -294,7 +295,7 @@ function printFullRow(
   isLastRow: boolean,
   startPos: Pos,
   cursor: Pos,
-  columns: Column[]
+  columns: Column[],
 ) {
   const remainingSpace = getRemainingPageSpace(doc, table, isLastRow, cursor)
   if (row.canEntireRowFit(remainingSpace, columns)) {
@@ -311,7 +312,7 @@ function printFullRow(
         isLastRow,
         startPos,
         cursor,
-        columns
+        columns,
       )
     } else {
       addPage(doc, table, startPos, cursor, columns)
@@ -325,7 +326,7 @@ function printRow(
   table: Table,
   row: Row,
   cursor: Pos,
-  columns: Column[]
+  columns: Column[],
 ) {
   cursor.x = table.settings.margin.left
   for (const column of columns) {
@@ -345,14 +346,14 @@ function printRow(
       cell,
       row,
       column,
-      cursor
+      cursor,
     )
     if (result === false) {
       cursor.x += column.width
       continue
     }
 
-    drawCellBorders(doc, cell, cursor)
+    drawCellRect(doc, cell, cursor)
 
     const textPos = cell.getTextPos()
     autoTableText(
@@ -363,10 +364,10 @@ function printRow(
         halign: cell.styles.halign,
         valign: cell.styles.valign,
         maxWidth: Math.ceil(
-          cell.width - cell.padding('left') - cell.padding('right')
+          cell.width - cell.padding('left') - cell.padding('right'),
         ),
       },
-      doc.getDocument()
+      doc.getDocument(),
     )
 
     table.callCellHooks(doc, table.hooks.didDrawCell, cell, row, column, cursor)
@@ -377,37 +378,27 @@ function printRow(
   cursor.y += row.height
 }
 
-function drawCellBorders(doc: DocHandler, cell: Cell, cursor: Pos) {
+function drawCellRect(doc: DocHandler, cell: Cell, cursor: Pos) {
   const cellStyles = cell.styles
+
+  // https://github.com/simonbengtsson/jsPDF-AutoTable/issues/774
+  // TODO (v4): better solution?
   doc.getDocument().setFillColor(doc.getDocument().getFillColor())
 
   if (typeof cellStyles.lineWidth === 'number') {
-    // prints normal cell border using rect's stroke
+    // Draw cell background with normal borders
     const fillStyle = getFillStyle(cellStyles.lineWidth, cellStyles.fillColor)
     if (fillStyle) {
       doc.rect(cell.x, cursor.y, cell.width, cell.height, fillStyle)
     }
   } else if (typeof cellStyles.lineWidth === 'object') {
-    drawCellBackground(doc, cell, cursor, cellStyles.fillColor)
-    drawBorders(doc, cell, cursor, cellStyles.fillColor, cellStyles.lineWidth)
+    // Draw cell background
+    if (cellStyles.fillColor) {
+      doc.rect(cell.x, cursor.y, cell.width, cell.height, 'F')
+    }
+    // Draw cell individual borders
+    drawCellBorders(doc, cell, cursor, cellStyles.lineWidth)
   }
-}
-
-/**
- * Prints cell background without borders and allows transparent color.
- * @param doc
- * @param cell
- * @param cursor
- * @param fillColor - passed to getFillStyle; `false` will map to transparent, `truthy` values to 'F' from jsPDF.rect
- */
-function drawCellBackground(
-  doc: DocHandler,
-  cell: Cell,
-  cursor: Pos,
-  fillColor: Color
-) {
-  const fillStyle = getFillStyle(0, fillColor)
-  doc.rect(cell.x, cursor.y, cell.width, cell.height, fillStyle)
 }
 
 /**
@@ -419,12 +410,11 @@ function drawCellBackground(
  * @param fillColor
  * @param lineWidth
  */
-function drawBorders(
+function drawCellBorders(
   doc: DocHandler,
   cell: Cell,
   cursor: Pos,
-  fillColor: Color,
-  lineWidth: Partial<LineWidths>
+  lineWidth: Partial<LineWidths>,
 ) {
   let x1, y1, x2, y2
 
@@ -439,7 +429,7 @@ function drawBorders(
     if (lineWidth.left) {
       x1 -= 0.5 * lineWidth.left
     }
-    drawLine([x1, y1, x2, y2], lineWidth.top, fillColor)
+    drawLine(lineWidth.top, x1, y1, x2, y2)
   }
 
   if (lineWidth.bottom) {
@@ -453,7 +443,7 @@ function drawBorders(
     if (lineWidth.left) {
       x1 -= 0.5 * lineWidth.left
     }
-    drawLine([x1, y1, x2, y2], lineWidth.bottom, fillColor)
+    drawLine(lineWidth.bottom, x1, y1, x2, y2)
   }
 
   if (lineWidth.left) {
@@ -467,7 +457,7 @@ function drawBorders(
     if (lineWidth.bottom) {
       y2 += 0.5 * lineWidth.bottom
     }
-    drawLine([x1, y1, x2, y2], lineWidth.left, fillColor)
+    drawLine(lineWidth.left, x1, y1, x2, y2)
   }
 
   if (lineWidth.right) {
@@ -481,16 +471,18 @@ function drawBorders(
     if (lineWidth.bottom) {
       y2 += 0.5 * lineWidth.bottom
     }
-    drawLine([x1, y1, x2, y2], lineWidth.right, fillColor)
+    drawLine(lineWidth.right, x1, y1, x2, y2)
   }
 
   function drawLine(
-    coords: [number, number, number, number],
     width: number,
-    color: Color
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
   ) {
     doc.getDocument().setLineWidth(width)
-    doc.getDocument().line(...coords, getFillStyle(width, color))
+    doc.getDocument().line(x1, y1, x2, y2, 'S')
   }
 }
 
@@ -498,7 +490,7 @@ function getRemainingPageSpace(
   doc: DocHandler,
   table: Table,
   isLastRow: boolean,
-  cursor: Pos
+  cursor: Pos,
 ) {
   let bottomContentHeight = table.settings.margin.bottom
   const showFoot = table.settings.showFoot
@@ -513,7 +505,7 @@ export function addPage(
   table: Table,
   startPos: Pos,
   cursor: Pos,
-  columns: Column[] = []
+  columns: Column[] = [],
 ) {
   doc.applyStyles(doc.userStyles)
   if (table.settings.showFoot === 'everyPage') {
