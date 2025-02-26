@@ -1,6 +1,6 @@
 {
   "name": "jspdf-autotable",
-  "version": "3.8.4",
+  "version": "4.0.0",
   "description": "Generate pdf tables with javascript (jsPDF plugin)",
   "main": "dist/jspdf.plugin.autotable.js",
   "exports": {
@@ -26,25 +26,27 @@
     "example": "examples"
   },
   "peerDependencies": {
-    "jspdf": "^2.5.1"
+    "jspdf": "^3.0.0"
   },
   "prettier": {
     "semi": false,
     "singleQuote": true
   },
   "devDependencies": {
-    "@rollup/plugin-typescript": "^11.1.5",
+    "@eslint/eslintrc": "^3.3.0",
+    "@eslint/js": "^9.21.0",
+    "@rollup/plugin-typescript": "^12.1.2",
     "@types/mocha": "^10.0.2",
-    "@typescript-eslint/eslint-plugin": "^6.7.5",
-    "@typescript-eslint/parser": "^6.7.5",
-    "dts-bundle-generator": "^8.0.1",
-    "eslint": "^8.51.0",
-    "eslint-config-prettier": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
+    "@typescript-eslint/parser": "^8.25.0",
+    "dts-bundle-generator": "^9.5.1",
+    "eslint": "^9.21.0",
+    "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.0.0",
-    "jsdom": "^22.1.0",
-    "jspdf": "^2.5.1",
-    "mocha": "^10.2.0",
-    "npm-check-updates": "^16.14.5",
+    "jsdom": "^26.0.0",
+    "jspdf": "^3.0.0",
+    "mocha": "^11.1.0",
+    "npm-check-updates": "^17.1.15",
     "prettier": "^3.0.3",
     "rollup": "^4.0.2",
     "ts-loader": "^9.5.0",
@@ -52,8 +54,8 @@
     "tslib": "^2.6.2",
     "typescript": "^5.2.2",
     "webpack": "^5.88.2",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1"
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.0"
   },
   "scripts": {
     "start": "webpack serve --config webpack.config.mjs --mode=development",
@@ -61,7 +63,7 @@
     "start-external": "webpack serve --config webpack.config.mjs --mode=development --host 0.0.0.0",
     "build": "webpack --mode=production && webpack --mode=production --env minified && npm run buildes && npm run types",
     "buildes": "rollup --config rollup.config.mjs",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint --ext=.ts .",
     "test": "mocha -r ts-node/register test/test*.ts",
     "format": "prettier --write src",
     "version": "npm test && npm run build && git add -A dist",

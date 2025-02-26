@@ -1,5 +1,5 @@
-import { Table } from './models'
 import { Color, Styles, UserOptions } from './config'
+import { Table } from './models'
 
 let globalDefaults: UserOptions = {}
 
@@ -59,9 +59,9 @@ export class DocHandler {
     // Font style needs to be applied before font
     // https://github.com/simonbengtsson/jsPDF-AutoTable/issues/632
 
-    if (styles.fontStyle)
-      this.jsPDFDocument.setFontStyle &&
-        this.jsPDFDocument.setFontStyle(styles.fontStyle)
+    if (styles.fontStyle && this.jsPDFDocument.setFontStyle) {
+      this.jsPDFDocument.setFontStyle(styles.fontStyle)
+    }
     let { fontStyle, fontName } = this.jsPDFDocument.internal.getFont()
     if (styles.font) fontName = styles.font
     if (styles.fontStyle) {
@@ -69,13 +69,13 @@ export class DocHandler {
       const availableFontStyles = this.getFontList()[fontName]
       if (
         availableFontStyles &&
-        availableFontStyles.indexOf(fontStyle) === -1
+        availableFontStyles.indexOf(fontStyle) === -1 &&
+        this.jsPDFDocument.setFontStyle
       ) {
         // Common issue was that the default bold in headers
         // made custom fonts not work. For example:
         // https://github.com/simonbengtsson/jsPDF-AutoTable/issues/653
-        this.jsPDFDocument.setFontStyle &&
-          this.jsPDFDocument.setFontStyle(availableFontStyles[0])
+        this.jsPDFDocument.setFontStyle(availableFontStyles[0])
         fontStyle = availableFontStyles[0]
       }
     }
@@ -163,10 +163,7 @@ export class DocHandler {
 
     // JSPDF 1.4 uses get functions instead of properties on pageSize
     if (pageSize.width == null) {
-      pageSize = {
-        width: pageSize.getWidth(),
-        height: pageSize.getHeight(),
-      }
+      pageSize = { width: pageSize.getWidth(), height: pageSize.getHeight() }
     }
 
     return pageSize
